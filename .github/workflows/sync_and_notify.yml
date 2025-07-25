@@ -1,0 +1,63 @@
+# A descriptive name for your workflow
+name: 🛎️ Sync Fork and Notify on README Change
+
+# Define the triggers for this workflow
+on:
+  # Run automatically every hour at the start of the hour
+  schedule:
+    - cron: '0 * * * *'
+  
+  # Allow manual runs from the GitHub Actions tab
+  workflow_dispatch:
+
+# Define the jobs that will run
+jobs:
+  sync:
+    # Use the latest version of Ubuntu as the operating system
+    runs-on: ubuntu-latest
+    
+    # Define the sequence of steps for the job
+    steps:
+      # 1. Checkout your fork's code
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch all commit history, which is needed for the diff later
+          fetch-depth: 0
+
+      # 2. Set up the upstream remote
+      - name: 🔗 Configure Upstream Remote
+        run: |
+          git config user.name "GitHub Action"
+          git config user.email "actions@github.com"
+          git remote add upstream https://github.com/vanshb03/Summer2026-Internships.git
+          git fetch upstream
+
+      # 3. Store the current commit hash of your dev branch
+      - name: 📝 Store Pre-Sync Commit Hash
+        id: pre_sync
+        run: echo "old_head=$(git rev-parse dev)" >> $GITHUB_OUTPUT
+
+      # 4. Sync the dev branch with the upstream repository
+      - name: 🔄 Sync and Push dev Branch
+        run: |
+          git checkout dev
+          git reset --hard upstream/dev
+          git push origin dev --force
+
+      # 5. Check if README.md was changed during the sync
+      - name: 🧪 Check for README.md Changes
+        id: readme_check
+        run: |
+          # Compare the commit hash from before the sync with the new one
+          git diff --name-only ${{ steps.pre_sync.outputs.old_head }} HEAD | grep -q "^README.md$" \
+          && echo "changed=true" >> $GITHUB_OUTPUT \
+          || echo "changed=false" >> $GITHUB_OUTPUT
+
+      # 6. Send a notification only if the README file changed
+      - name: 🔔 Send Notification
+        if: steps.readme_check.outputs.changed == 'true'
+        run: |
+          curl -X POST https://whatsapp-reminder-backend.onrender.com/api/github-internship-update \
+          -H "Content-Type: application/json" \
+          -d '{"token": "internship2026", "message": "📢 Heads up! The Summer 2026 Internship README has been updated."}'
