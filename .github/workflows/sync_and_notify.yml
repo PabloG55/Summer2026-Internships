@@ -47,6 +47,6 @@ jobs:
       - name: 🔔 Send Notification
         if: steps.readme_check.outputs.changed == 'true'
         run: |
-          curl -X POST https://whatsapp-reminder-backend.onrender.com/api/github-internship-update \
+          curl -X POST https://botifier-backend-8e128f55506c.herokuapp.com/api/github-internship-update \
           -H "Content-Type: application/json" \
           -d '{"token": "internship2026", "message": "📢 Heads up! The Summer 2026 Internship README has been updated."}'
